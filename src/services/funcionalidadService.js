@@ -44,7 +44,18 @@ const BLOCKLIST_PROMPT = [
  * @returns {Promise<Array<{ id: string, nombre: string, descripcion: string|null, activo: boolean, created_at: string }>>}
  */
 async function listar(userId) {
-  return funcionalidadRepo.findAllByUser(userId);
+  const rows = await funcionalidadRepo.findAllByUser(userId);
+  if (!rows.some((f) => f.nombre === 'Análisis de documentos')) {
+    const base = await funcionalidadRepo.create(userId, {
+      nombre: 'Análisis de documentos',
+      descripcion: 'Analiza documentos PDF, Word y Excel subidos al chat.',
+      system_prompt:
+        'Podés analizar documentos que el usuario suba al chat. ' +
+        'Usá la herramienta analizar_documento para procesar PDFs, Word y Excel.',
+    });
+    rows.unshift(base);
+  }
+  return rows;
 }
 
 /**
@@ -121,4 +132,17 @@ async function buildSystemPrompt(userId) {
   return funcionalidades.map((f) => `=== ${f.nombre} ===\n${f.system_prompt}`).join('\n\n');
 }
 
-module.exports = { listar, crear, toggleActivo, buildSystemPrompt };
+/**
+ * Elimina permanentemente una funcionalidad del usuario.
+ *
+ * @param {string} id - UUID de la funcionalidad
+ * @param {string} userId - ID del usuario autenticado (control de acceso)
+ * @returns {Promise<void>}
+ * @throws {AppError} code: 'FUNCIONALIDAD_NOT_FOUND'
+ */
+async function eliminar(id, userId) {
+  await funcionalidadRepo.eliminar(id, userId);
+  logger.info('Funcionalidad eliminada', { userId, id });
+}
+
+module.exports = { listar, crear, toggleActivo, eliminar, buildSystemPrompt };

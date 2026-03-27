@@ -7,7 +7,7 @@ const { body, param } = require('express-validator');
 const { verificarToken } = require('../middleware/auth');
 const manejarErroresValidacion = require('../middleware/manejarErroresValidacion');
 const { apiRateLimiter } = require('../middleware/rateLimiters');
-const { listar, crear, toggleActivo } = require('../controllers/funcionalidadController');
+const { listar, crear, toggleActivo, eliminar } = require('../controllers/funcionalidadController');
 
 const router = Router();
 
@@ -41,6 +41,15 @@ router.patch(
   [param('id').isUUID().withMessage('id debe ser un UUID válido')],
   manejarErroresValidacion,
   toggleActivo
+);
+
+// DELETE /api/funcionalidades/:id
+router.delete(
+  '/:id',
+  verificarToken,
+  [param('id').isUUID().withMessage('id debe ser un UUID válido')],
+  manejarErroresValidacion,
+  eliminar
 );
 
 module.exports = router;

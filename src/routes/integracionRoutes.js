@@ -7,7 +7,12 @@ const { body, param } = require('express-validator');
 const { verificarToken } = require('../middleware/auth');
 const manejarErroresValidacion = require('../middleware/manejarErroresValidacion');
 const { apiRateLimiter } = require('../middleware/rateLimiters');
-const { listar, conectarApiKey, desconectar } = require('../controllers/integracionController');
+const {
+  listar,
+  conectarApiKey,
+  desconectar,
+  toggleActivo,
+} = require('../controllers/integracionController');
 const { conectarGoogle, callbackGoogle } = require('../controllers/oauthController');
 const { TIPOS_VALIDOS } = require('../constants/integraciones');
 
@@ -47,6 +52,19 @@ router.post(
 
 // GET /api/integraciones/google/callback  (Google redirige aquí, sin JWT propio)
 router.get('/google/callback', apiRateLimiter, callbackGoogle);
+
+// PATCH /api/integraciones/:tipo/toggle
+router.patch(
+  '/:tipo/toggle',
+  verificarToken,
+  [
+    param('tipo')
+      .isIn(TIPOS_VALIDOS)
+      .withMessage(`tipo debe ser uno de: ${TIPOS_VALIDOS.join(', ')}`),
+  ],
+  manejarErroresValidacion,
+  toggleActivo
+);
 
 // DELETE /api/integraciones/:tipo
 router.delete(

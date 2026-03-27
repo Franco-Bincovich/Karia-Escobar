@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 import CrearFuncionalidad from './pages/CrearFuncionalidad';
+import Perfil from './pages/Perfil';
 import './styles/globals.css';
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/crear-funcionalidad" element={<PrivateRoute><CrearFuncionalidad /></PrivateRoute>} />
+          <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
       </AuthProvider>

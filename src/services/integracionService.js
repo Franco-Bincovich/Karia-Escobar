@@ -12,22 +12,24 @@ const TIPOS_API_KEY = ['anthropic', 'openai', 'perplexity', 'gamma'];
 const TIPOS_GOOGLE = ['gmail', 'drive', 'calendar'];
 
 /**
- * Lista las integraciones activas de un usuario sin exponer credenciales.
+ * Lista todas las integraciones de un usuario sin exponer credenciales.
  *
  * @param {string} userId
  * @returns {Promise<Array<{ id, tipo, activo, connected_at, updated_at }>>}
  */
 async function listarIntegraciones(userId) {
   const rows = await integracionRepo.findByUser(userId);
-  return rows
-    .filter((r) => r.activo)
-    .map(({ id, tipo, activo, connected_at, updated_at }) => ({
-      id,
-      tipo,
-      activo,
-      connected_at,
-      updated_at,
-    }));
+  if (!rows.some((r) => r.tipo === 'anthropic')) {
+    const base = await integracionRepo.upsert(userId, 'anthropic', {});
+    rows.unshift(base);
+  }
+  return rows.map(({ id, tipo, activo, connected_at, updated_at }) => ({
+    id,
+    tipo,
+    activo,
+    connected_at,
+    updated_at,
+  }));
 }
 
 /**
@@ -139,6 +141,13 @@ async function getIntegracionesActivas(userId) {
   return rows.filter((r) => r.activo).map((r) => r.tipo);
 }
 
+/** @param {string} userId @param {string} tipo @returns {Promise<{ activo: boolean }>} */
+async function toggleActivo(userId, tipo) {
+  const row = await integracionRepo.toggleActivo(userId, tipo);
+  logger.info('Integración toggled', { userId, tipo, activo: row.activo });
+  return { activo: row.activo };
+}
+
 module.exports = {
   listarIntegraciones,
   guardarApiKey,
@@ -146,4 +155,5 @@ module.exports = {
   desconectar,
   getCredenciales,
   getIntegracionesActivas,
+  toggleActivo,
 };

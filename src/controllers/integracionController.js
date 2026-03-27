@@ -44,4 +44,16 @@ async function desconectar(req, res, next) {
   }
 }
 
-module.exports = { listar, conectarApiKey, desconectar };
+/**
+ * PATCH /api/integraciones/:tipo/toggle
+ */
+async function toggleActivo(req, res, next) {
+  try {
+    const resultado = await integracionService.toggleActivo(req.user.userId, req.params.tipo);
+    res.json({ ok: true, activo: resultado.activo });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listar, conectarApiKey, desconectar, toggleActivo };

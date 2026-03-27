@@ -61,4 +61,21 @@ async function toggleActivo(req, res, next) {
   }
 }
 
-module.exports = { listar, crear, toggleActivo };
+/**
+ * DELETE /api/funcionalidades/:id
+ * Elimina permanentemente una funcionalidad.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+async function eliminar(req, res, next) {
+  try {
+    await funcionalidadService.eliminar(req.params.id, req.user.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listar, crear, toggleActivo, eliminar };

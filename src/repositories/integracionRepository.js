@@ -122,4 +122,24 @@ async function eliminar(userId, tipo) {
   if (!data) throw new AppError('Integración no encontrada', 'INTEGRACION_NOT_FOUND', 404);
 }
 
-module.exports = { findByUser, findByUserAndTipo, upsert, desactivar, eliminar };
+/** @param {string} userId @param {string} tipo @returns {Promise<Object>} @throws {AppError} */
+async function toggleActivo(userId, tipo) {
+  const actual = await findByUserAndTipo(userId, tipo);
+  if (!actual) throw new AppError('Integración no encontrada', 'INTEGRACION_NOT_FOUND', 404);
+
+  const { data, error } = await supabase
+    .from('integraciones-escobar')
+    .update({ activo: !actual.activo, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('tipo', tipo)
+    .select()
+    .single();
+
+  if (error) {
+    logger.error('Error en toggleActivo integracion', { error: error.message });
+    throw new AppError('Error al cambiar estado de integración', 'DB_ERROR', 500);
+  }
+  return data;
+}
+
+module.exports = { findByUser, findByUserAndTipo, upsert, desactivar, eliminar, toggleActivo };

@@ -42,6 +42,8 @@ export const integracionesApi = {
   listar: (token) => apiFetch('/api/integraciones', {}, token),
   conectarApiKey: (tipo, apiKey, token) =>
     apiFetch('/api/integraciones/apikey', { method: 'POST', body: JSON.stringify({ tipo, apiKey }) }, token),
+  toggle: (tipo, token) =>
+    apiFetch(`/api/integraciones/${tipo}/toggle`, { method: 'PATCH' }, token),
   desconectar: (tipo, token) =>
     apiFetch(`/api/integraciones/${tipo}`, { method: 'DELETE' }, token),
 };
@@ -52,6 +54,8 @@ export const funcionalidadesApi = {
     apiFetch('/api/funcionalidades', { method: 'POST', body: JSON.stringify(datos) }, token),
   toggle: (id, token) =>
     apiFetch(`/api/funcionalidades/${id}/toggle`, { method: 'PATCH' }, token),
+  eliminar: (id, token) =>
+    apiFetch(`/api/funcionalidades/${id}`, { method: 'DELETE' }, token),
 };
 
 export const chatConfiguradorApi = {

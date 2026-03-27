@@ -3,6 +3,7 @@
 // Expandido: 260px con labels. Colapsado: 64px solo íconos.
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import SidebarHeader from './SidebarHeader';
 import SidebarHistory from './SidebarHistory';
@@ -67,6 +68,7 @@ export default function Sidebar({ onSeleccionarConversacion, onLogout }) {
   const [abrIntegraciones, setAbrIntegraciones] = useState(false);
   const [abrPerfil, setAbrPerfil] = useState(false);
   const { user, token } = useAuth();
+  const navigate = useNavigate();
 
   const ancho = expandido ? '260px' : '64px';
 
@@ -112,8 +114,17 @@ export default function Sidebar({ onSeleccionarConversacion, onLogout }) {
         >
           {expandido && (
             <div style={{ padding: '0.4rem 1rem 0.6rem' }}>
-              {/* Nombre y rol */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              {/* Nombre y rol — click navega a /perfil */}
+              <button
+                onClick={() => navigate('/perfil')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem',
+                  width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
+                  padding: '0.3rem 0', borderRadius: 'var(--border-radius)', transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(67,209,201,0.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '50%',
                   background: 'var(--color-teal)', flexShrink: 0,
@@ -122,7 +133,7 @@ export default function Sidebar({ onSeleccionarConversacion, onLogout }) {
                 }}>
                   {(user?.nombre || user?.email || '?')[0].toUpperCase()}
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, textAlign: 'left' }}>
                   <div style={{ fontSize: '13px', color: 'var(--color-white)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {user?.nombre || user?.email || 'Usuario'}
                   </div>
@@ -137,7 +148,7 @@ export default function Sidebar({ onSeleccionarConversacion, onLogout }) {
                     {user?.rol || 'analista'}
                   </span>
                 </div>
-              </div>
+              </button>
 
               {/* Cerrar sesión */}
               <button

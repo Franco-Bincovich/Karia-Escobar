@@ -119,4 +119,28 @@ async function toggleActivo(id, userId) {
   return update(id, userId, { activo: !actual.activo });
 }
 
-module.exports = { findActiveByUser, findAllByUser, create, update, toggleActivo };
+/**
+ * Elimina permanentemente una funcionalidad verificando ownership.
+ *
+ * @param {string} id
+ * @param {string} userId
+ * @returns {Promise<void>}
+ * @throws {AppError} code: 'FUNCIONALIDAD_NOT_FOUND'
+ */
+async function eliminar(id, userId) {
+  const { data, error } = await supabase
+    .from('funcionalidades-escobar')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    logger.error('Error en eliminar funcionalidad', { error: error.message });
+    throw new AppError('Error al eliminar funcionalidad', 'DB_ERROR', 500);
+  }
+  if (!data) throw new AppError('Funcionalidad no encontrada', 'FUNCIONALIDAD_NOT_FOUND', 404);
+}
+
+module.exports = { findActiveByUser, findAllByUser, create, update, toggleActivo, eliminar };
