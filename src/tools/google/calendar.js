@@ -2,12 +2,11 @@
 // Herramientas Calendar: listar eventos próximos y crear evento.
 
 const { google } = require('googleapis');
+const config = require('../../config');
 const { getGoogleClient } = require('../../integrations/googleClient');
 const { withCircuitBreaker } = require('../../utils/circuitBreaker');
 const { withRetry } = require('../../utils/reintentos');
 const logger = require('../../utils/logger').child({ module: 'calendar' });
-
-const TZ = 'America/Argentina/Buenos_Aires';
 const soloTransitorios = (err) => !err.isOperational && (!err.code || err.code >= 500);
 
 // ── leerCalendar ─────────────────────────────────────────────────────────────
@@ -32,6 +31,7 @@ async function _leerCalendar({ userId, dias = 7 }) {
     maxResults: 25,
     singleEvents: true,
     orderBy: 'startTime',
+    timeZone: config.timezone,
   });
 
   return (res.data.items || []).map((evento) => {
@@ -40,7 +40,7 @@ async function _leerCalendar({ userId, dias = 7 }) {
       ? new Date(evento.start.dateTime).toLocaleTimeString('es-AR', {
           hour: '2-digit',
           minute: '2-digit',
-          timeZone: TZ,
+          timeZone: config.timezone,
         })
       : 'Todo el día';
     const fecha = inicio.split('T')[0] || inicio;
@@ -82,8 +82,8 @@ async function _crearEvento({
     requestBody: {
       summary: titulo,
       description: descripcion,
-      start: { dateTime: inicio.toISOString(), timeZone: TZ },
-      end: { dateTime: fin.toISOString(), timeZone: TZ },
+      start: { dateTime: inicio.toISOString(), timeZone: config.timezone },
+      end: { dateTime: fin.toISOString(), timeZone: config.timezone },
     },
   });
 

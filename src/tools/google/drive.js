@@ -30,7 +30,10 @@ async function _buscarDrive({ userId, query }) {
   const auth = await getGoogleClient(userId, 'drive');
   const drive = google.drive({ version: 'v3', auth });
 
-  const termino = query.replace(/'/g, "\\'");
+  const termino = query
+    .replace(/['"\\()]/g, ' ')
+    .trim()
+    .slice(0, 200);
   const q = `(name contains '${termino}' or fullText contains '${termino}') and trashed = false`;
 
   const res = await drive.files.list({

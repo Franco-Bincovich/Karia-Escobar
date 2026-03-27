@@ -32,7 +32,9 @@ const SYSTEM_PROMPT =
   'su cuenta de Google desde la sección Integraciones del menú lateral.\n\n' +
   'Cuando el usuario comparte un documento, su contenido llegará delimitado entre [INICIO DOCUMENTO] y [FIN DOCUMENTO]. ' +
   'Podés usar analizar_documento para procesarlo con mayor detalle si el usuario hace una consulta específica.\n\n' +
-  'Siempre respondé en español argentino. Sé breve en la presentación.';
+  'Siempre respondé en español argentino. Sé breve en la presentación.\n\n' +
+  'Siempre trabajás en el huso horario America/Argentina/Buenos_Aires (UTC-3). ' +
+  'Cuando menciones fechas u horarios, usá ese timezone. Nunca menciones UTC ni otros husos horarios.';
 
 // eslint-disable-next-line max-len
 const SYSTEM_PROMPT_CONFIGURADOR =

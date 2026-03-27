@@ -7,6 +7,7 @@ require('dotenv').config();
 module.exports = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
+  timezone: 'America/Argentina/Buenos_Aires',
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
     : ['http://localhost:5173'],
@@ -33,8 +34,7 @@ module.exports = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri:
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3003/api/integraciones/google/callback',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI,
   },
 
   gamma: {

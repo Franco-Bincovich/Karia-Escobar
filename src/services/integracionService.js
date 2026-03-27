@@ -64,7 +64,7 @@ async function guardarApiKey(userId, tipo, apiKey) {
  *
  * @param {string} userId
  * @param {string} tipo - 'gmail' | 'drive' | 'calendar'
- * @param {{ access_token: string, refresh_token: string, expiry: string|number }} tokens
+ * @param {{ access_token: string, refresh_token: string, expiry: string|number, client_id?: string, client_secret?: string }} tokens
  * @returns {Promise<{ id, tipo, connected_at }>}
  * @throws {AppError} code: 'TIPO_INVALIDO' | 'TOKENS_INVALIDOS'
  */
@@ -76,7 +76,7 @@ async function guardarTokenGoogle(userId, tipo, tokens) {
       400
     );
   }
-  const { access_token, refresh_token, expiry } = tokens || {};
+  const { access_token, refresh_token, expiry, client_id, client_secret } = tokens || {};
   if (!access_token || !refresh_token) {
     throw new AppError('access_token y refresh_token son obligatorios', 'TOKENS_INVALIDOS', 400);
   }
@@ -85,6 +85,8 @@ async function guardarTokenGoogle(userId, tipo, tokens) {
     access_token: cifrar(access_token),
     refresh_token: cifrar(refresh_token),
     expiry: expiry ? cifrar(String(expiry)) : null,
+    client_id: client_id ? cifrar(client_id) : null,
+    client_secret: client_secret ? cifrar(client_secret) : null,
   };
   const row = await integracionRepo.upsert(userId, tipo, credenciales);
 
@@ -126,10 +128,22 @@ async function getCredenciales(userId, tipo) {
   return descifradas;
 }
 
+/**
+ * Devuelve los nombres de las integraciones activas de un usuario.
+ *
+ * @param {string} userId
+ * @returns {Promise<string[]>} ej. ['gmail', 'calendar']
+ */
+async function getIntegracionesActivas(userId) {
+  const rows = await integracionRepo.findByUser(userId);
+  return rows.filter((r) => r.activo).map((r) => r.tipo);
+}
+
 module.exports = {
   listarIntegraciones,
   guardarApiKey,
   guardarTokenGoogle,
   desconectar,
   getCredenciales,
+  getIntegracionesActivas,
 };

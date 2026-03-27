@@ -1,64 +1,13 @@
 // integrations/googleClient.js
 // Crea un cliente OAuth2 autenticado para un usuario.
-// Maneja refresh automático y persiste los nuevos tokens en Supabase.
+// Refresca tokens expirados delegando a googleTokenRefresh.
 
 const { google } = require('googleapis');
 const config = require('../config');
 const { AppError } = require('../middleware/errorHandler');
 const integracionService = require('../services/integracionService');
+const { refreshAndPersist } = require('./googleTokenRefresh');
 const logger = require('../utils/logger').child({ module: 'googleClient' });
-
-const SERVICIOS_GOOGLE = ['gmail', 'drive', 'calendar'];
-
-// Deduplicación de refreshes concurrentes: evita que dos requests simultáneos
-// con el mismo token expirado lancen dos llamadas a refreshAccessToken para el mismo userId.
-const refreshInFlight = new Map(); // userId → Promise<credentials>
-
-/**
- * Refresca el access_token y persiste los nuevos tokens en todos los servicios Google.
- * Si ya hay un refresh en curso para ese userId devuelve la misma promesa.
- *
- * @param {string} userId
- * @param {string} refreshToken - refresh_token vigente
- * @returns {Promise<Object>} credentials de googleapis
- */
-async function _refreshAndPersist(userId, refreshToken) {
-  if (refreshInFlight.has(userId)) return refreshInFlight.get(userId);
-
-  const promise = (async () => {
-    const tempClient = new google.auth.OAuth2(
-      config.google.clientId,
-      config.google.clientSecret,
-      config.google.redirectUri
-    );
-    tempClient.setCredentials({ refresh_token: refreshToken });
-    const { credentials } = await tempClient.refreshAccessToken();
-
-    const resultados = await Promise.allSettled(
-      SERVICIOS_GOOGLE.map((s) =>
-        integracionService.guardarTokenGoogle(userId, s, {
-          access_token: credentials.access_token,
-          refresh_token: credentials.refresh_token || refreshToken,
-          expiry: credentials.expiry_date,
-        })
-      )
-    );
-    resultados.forEach((r, i) => {
-      if (r.status === 'rejected') {
-        logger.warn('No se pudo persistir token Google', {
-          userId,
-          servicio: SERVICIOS_GOOGLE[i],
-          error: r.reason?.message,
-        });
-      }
-    });
-
-    return credentials;
-  })().finally(() => refreshInFlight.delete(userId));
-
-  refreshInFlight.set(userId, promise);
-  return promise;
-}
 
 /**
  * Devuelve un cliente OAuth2 autenticado y listo para usar.
@@ -73,7 +22,22 @@ async function getGoogleClient(userId, tipo) {
   let creds;
   try {
     creds = await integracionService.getCredenciales(userId, tipo);
+    logger.debug('Credenciales obtenidas', {
+      userId,
+      tipo,
+      tieneAccessToken: !!creds.access_token,
+      tieneRefreshToken: !!creds.refresh_token,
+      tieneExpiry: !!creds.expiry,
+      tieneClientId: !!creds.client_id,
+      tieneClientSecret: !!creds.client_secret,
+    });
   } catch (err) {
+    logger.warn('Error al obtener credenciales Google', {
+      userId,
+      tipo,
+      code: err.code,
+      message: err.message,
+    });
     if (err.code === 'INTEGRACION_NOT_FOUND' || err.code === 'INTEGRACION_INACTIVA') {
       throw new AppError(
         `Google ${tipo} no está conectado. Conectá tu cuenta desde la sección Integraciones del menú.`,
@@ -84,7 +48,18 @@ async function getGoogleClient(userId, tipo) {
     throw err;
   }
 
-  if (!config.google.clientId || !config.google.clientSecret) {
+  const efectivoClientId = creds.client_id || config.google.clientId;
+  const efectivoClientSecret = creds.client_secret || config.google.clientSecret;
+
+  if (!efectivoClientId || !efectivoClientSecret) {
+    logger.error('Credenciales de Google Cloud faltantes', {
+      userId,
+      tipo,
+      tieneClientIdAlmacenado: !!creds.client_id,
+      tieneClientIdConfig: !!config.google.clientId,
+      tieneClientSecretAlmacenado: !!creds.client_secret,
+      tieneClientSecretConfig: !!config.google.clientSecret,
+    });
     throw new AppError(
       'Configurá las credenciales de Google Cloud Console en la sección Integraciones.',
       'GOOGLE_CREDENTIALS_MISSING',
@@ -93,8 +68,8 @@ async function getGoogleClient(userId, tipo) {
   }
 
   const oauth2Client = new google.auth.OAuth2(
-    config.google.clientId,
-    config.google.clientSecret,
+    efectivoClientId,
+    efectivoClientSecret,
     config.google.redirectUri
   );
   const expiry = creds.expiry ? parseInt(creds.expiry, 10) : null;
@@ -102,7 +77,10 @@ async function getGoogleClient(userId, tipo) {
 
   if (expirado && creds.refresh_token) {
     try {
-      const credentials = await _refreshAndPersist(userId, creds.refresh_token);
+      const credentials = await refreshAndPersist(userId, creds.refresh_token, {
+        clientId: efectivoClientId,
+        clientSecret: efectivoClientSecret,
+      });
       oauth2Client.setCredentials(credentials);
       logger.info('Token Google refrescado', { userId, tipo });
     } catch (_) {

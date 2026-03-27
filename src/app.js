@@ -26,15 +26,22 @@ const corsOptions = {
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
-// Seguridad de cabeceras HTTP (crossOriginResourcePolicy en cross-origin para APIs)
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+// Seguridad de cabeceras HTTP
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    contentSecurityPolicy: false,
+  })
+);
 
 // Parseo de JSON con límite de 10kb
 app.use(express.json({ limit: '10kb' }));
 
 // Health check — Base 8: Run & See inmediato
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok' });
 });
 
 // Rutas

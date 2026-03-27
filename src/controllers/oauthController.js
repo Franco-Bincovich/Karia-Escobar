@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const { AppError } = require('../middleware/errorHandler');
 const integracionService = require('../services/integracionService');
+const { cifrar, descifrar } = require('../utils/crypto');
 const logger = require('../utils/logger').child({ module: 'oauthController' });
 const { SCOPES_POR_SERVICIO, SERVICIOS_VALIDOS } = require('../constants/integraciones');
 const { crearOAuthClient } = require('../integrations/googleOAuthFactory');
@@ -38,7 +39,10 @@ async function conectarGoogle(req, res, next) {
     const oauthClient = crearOAuthClient(clientId || null, clientSecret || null);
 
     const scopes = servicios.flatMap((s) => SCOPES_POR_SERVICIO[s]);
-    const estado = jwt.sign({ userId: req.user.userId, servicios }, config.oauthStateSecret, {
+    const statePayload = { userId: req.user.userId, servicios };
+    if (clientId) statePayload.cid = cifrar(clientId);
+    if (clientSecret) statePayload.csc = cifrar(clientSecret);
+    const estado = jwt.sign(statePayload, config.oauthStateSecret, {
       expiresIn: '10m',
     });
 
@@ -73,19 +77,25 @@ async function callbackGoogle(req, res, next) {
 
     let userId;
     let serviciosState;
+    let clientId;
+    let clientSecret;
     try {
       const payload = jwt.verify(state, config.oauthStateSecret);
       userId = payload.userId;
       serviciosState = Array.isArray(payload.servicios) ? payload.servicios : SERVICIOS_VALIDOS;
+      clientId = payload.cid ? descifrar(payload.cid) : null;
+      clientSecret = payload.csc ? descifrar(payload.csc) : null;
     } catch (_) {
       return next(new AppError('State OAuth inválido o expirado', 'OAUTH_STATE_INVALID', 400));
     }
 
-    const { tokens } = await crearOAuthClient().getToken(code);
+    const { tokens } = await crearOAuthClient(clientId, clientSecret).getToken(code);
     const tokensPayload = {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expiry: tokens.expiry_date,
+      client_id: clientId,
+      client_secret: clientSecret,
     };
 
     await Promise.all(

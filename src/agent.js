@@ -7,6 +7,7 @@ const { AppError } = require('./middleware/errorHandler');
 const logger = require('./utils/logger').child({ module: 'agent' });
 const { TOOLS } = require('./tools');
 const funcionalidadService = require('./services/funcionalidadService');
+const integracionService = require('./services/integracionService');
 const { ejecutarLoop } = require('./utils/agentLoop');
 const { SYSTEM_PROMPT, SYSTEM_PROMPT_CONFIGURADOR } = require('./config/systemPrompts');
 
@@ -32,6 +33,21 @@ async function ejecutarAgente({ mensaje, historial, userId }) {
     if (dinamico) systemPrompt = dinamico;
   } catch (_) {
     logger.warn('No se pudo cargar system prompt dinámico, usando fallback', { userId });
+  }
+
+  const ahora = new Date().toLocaleString('es-AR', { timeZone: config.timezone });
+  systemPrompt += `\n\nLa fecha y hora actual es: ${ahora}`;
+
+  try {
+    const activas = await integracionService.getIntegracionesActivas(userId);
+    if (activas.length > 0) {
+      const nombres = activas.map((t) => t.charAt(0).toUpperCase() + t.slice(1));
+      systemPrompt +=
+        `\n\nIntegraciones conectadas del usuario: ${nombres.join(', ')}.\n` +
+        'Podés usar estas integraciones directamente sin pedirle al usuario que las conecte.';
+    }
+  } catch (_) {
+    logger.warn('No se pudieron cargar integraciones activas', { userId });
   }
 
   return ejecutarLoop({ messages, systemPrompt, tools: TOOLS, userId });

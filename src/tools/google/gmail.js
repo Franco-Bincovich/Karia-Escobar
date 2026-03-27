@@ -2,6 +2,8 @@
 // Herramientas Gmail: leer bandeja no leída y enviar emails.
 
 const { google } = require('googleapis');
+const config = require('../../config');
+const { AppError } = require('../../middleware/errorHandler');
 const { getGoogleClient } = require('../../integrations/googleClient');
 const { withCircuitBreaker } = require('../../utils/circuitBreaker');
 const { withRetry } = require('../../utils/reintentos');
@@ -48,7 +50,9 @@ async function _leerGmail({ userId, cantidad = 5 }) {
       id: d.data.id,
       de: get('From'),
       asunto: get('Subject'),
-      fecha: get('Date'),
+      fecha: get('Date')
+        ? new Date(get('Date')).toLocaleString('es-AR', { timeZone: config.timezone })
+        : '',
       resumen: d.data.snippet || '',
     };
   });
@@ -63,12 +67,17 @@ async function _leerGmail({ userId, cantidad = 5 }) {
  * @returns {Promise<{ ok: boolean, para: string, asunto: string }>}
  */
 async function _enviarGmail({ userId, para, asunto, cuerpo }) {
+  if (/[\r\n]/.test(para)) {
+    throw new AppError('Dirección de email inválida', 'EMAIL_INVALIDO', 400);
+  }
+  const asuntoLimpio = asunto.replace(/[\r\n]/g, ' ').trim();
+
   const auth = await getGoogleClient(userId, 'gmail');
   const gmail = google.gmail({ version: 'v1', auth });
 
   const mime = [
     `To: ${para}`,
-    `Subject: ${asunto}`,
+    `Subject: ${asuntoLimpio}`,
     'Content-Type: text/plain; charset=utf-8',
     'MIME-Version: 1.0',
     '',
